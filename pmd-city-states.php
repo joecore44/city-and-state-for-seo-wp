@@ -16,8 +16,8 @@ add_shortcode('display_name', 'display_name_shortcode');
 // Rewrite rules for state and city paraemters
 function custom_rewrite_rules() {
     add_rewrite_rule(
-        '^affordable-trt-page/([^/]+)/?$',
-        'index.php?page_id=53861&state=$matches[1]',
+        '^affordable-trt-page/([^/]+)(?:/([^/]+))?/?$',
+        'index.php?page_id=53861&state=$matches[1]&city=$matches[2]',
         'top'
     );
 }
@@ -26,6 +26,7 @@ add_action('init', 'custom_rewrite_rules');
 
 function custom_query_vars($query_vars) {
     $query_vars[] = 'state';
+    $query_vars[] = 'city';
     return $query_vars;
 }
 
@@ -58,8 +59,44 @@ function state_name_shortcode() {
 
 
 function city_name_shortcode($atts) {
-    return isset($_GET['city_name']) ? sanitize_text_field($_GET['city_name']) : '';
+    // Attempt to directly access the city name from the URL
+    $city_name = isset($_GET['city']) ? sanitize_text_field($_GET['city']) : '';
+
+    // If the city name is not in the query parameter, try to get it from the URL structure
+    if (empty($city_name)) {
+        global $wp;
+        $current_url = home_url(add_query_arg(array(), $wp->request));
+        $url_parts = explode('/', $current_url);
+
+        // Check if the URL structure includes both state and city
+        if (count($url_parts) > 2) {
+            // Get the second-to-last part of the URL (city name)
+            $city_name = $url_parts[count($url_parts) - 2];
+
+            // Remove any additional parameters
+            $city_name_parts = explode('?', $city_name);
+            $city_name = $city_name_parts[0];
+        }
+    }
+
+    // Remove any non-alphanumeric characters
+    $city_name = preg_replace('/[^a-zA-Z0-9]/', ' ', $city_name);
+
+    // If the city name is not empty, try to find it in the cities.json file
+    if (!empty($city_name)) {
+        $city_data = json_decode(file_get_contents(plugin_dir_path(__FILE__) . 'cities.json'), true);
+
+        foreach ($city_data as $state => $cities) {
+            // Check if the city exists in the current state
+            if (in_array($city_name, $cities)) {
+                return ucwords($city_name) . ', ' . ucwords(str_replace('-', ' ', $state));
+            }
+        }
+    }
+
+    return ''; // Return an empty string if the city is not found or not provided
 }
+
 
 
 function state_data_shortcode($atts) {
