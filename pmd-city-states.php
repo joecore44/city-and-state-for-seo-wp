@@ -11,6 +11,7 @@ add_shortcode('state_name', 'state_name_shortcode');
 add_shortcode('city_name', 'city_name_shortcode');
 add_shortcode('state_data', 'state_data_shortcode');
 add_shortcode('states_data', 'states_data_shortcode');
+add_shortcode('display_name', 'display_name_shortcode');
 
 // Rewrite rules for state and city paraemters
 function custom_rewrite_rules() {
@@ -49,9 +50,10 @@ function state_name_shortcode() {
     }
 
     // Remove any non-alphanumeric characters
-    $state_name = preg_replace('/[^a-zA-Z0-9]/', '', $state_name);
+    $state_name = preg_replace('/[^a-zA-Z0-9]/', ' ', $state_name);
 
-    return $state_name;
+    $state_upper = ucwords($state_name);
+    return $state_upper;
 }
 
 
@@ -119,7 +121,7 @@ function state_data_shortcode($atts) {
 }    
 
 function empty_state_data_shortcode($atts) {
-    $state_name = state_name_shortcode($atts);
+    $state_name = '';//state_name_shortcode($atts);
 
     $city_data = json_decode(file_get_contents(plugin_dir_path(__FILE__) . 'cities.json'), true);
 
@@ -159,6 +161,23 @@ function empty_state_data_shortcode($atts) {
     $html .= '</div>'; // Close the container
 
     return $html;
+}
+
+function display_name_shortcode() {
+    $state = state_name_shortcode();
+    $city = city_name_shortcode([]);
+
+    if (!empty($state)) {
+        $display_name = $state;
+
+        if (!empty($city)) {
+            $display_name .= ', ' . $city;
+        }
+
+        return $display_name;
+    }
+
+    return ''; 
 }
 
 
