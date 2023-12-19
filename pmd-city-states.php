@@ -12,11 +12,46 @@ add_shortcode('city_name', 'city_name_shortcode');
 add_shortcode('state_data', 'state_data_shortcode');
 add_shortcode('states_data', 'states_data_shortcode');
 
+// Rewrite rules for state and city paraemters
+function custom_rewrite_rules() {
+    add_rewrite_rule(
+        '^affordable-trt-page/([^/]+)/?$',
+        'index.php?page_id=53861&state=$matches[1]',
+        'top'
+    );
+}
+
+add_action('init', 'custom_rewrite_rules');
+
+function custom_query_vars($query_vars) {
+    $query_vars[] = 'state';
+    return $query_vars;
+}
+
+add_filter('query_vars', 'custom_query_vars');
 
 function state_name_shortcode() {
     // Attempt to directly access the state name from the URL
     $state_name = isset($_GET['state']) ? sanitize_text_field($_GET['state']) : '';
-    echo $state_name;
+
+    // If the state name is not in the query parameter, try to get it from the URL structure
+    if (empty($state_name)) {
+        global $wp;
+        $current_url = home_url(add_query_arg(array(), $wp->request));
+        $url_parts = explode('/', $current_url);
+
+        // Get the last part of the URL (state name)
+        $state_name = end($url_parts);
+
+        // Remove any additional parameters
+        $state_name_parts = explode('?', $state_name);
+        $state_name = $state_name_parts[0];
+    }
+
+    // Remove any non-alphanumeric characters
+    $state_name = preg_replace('/[^a-zA-Z0-9]/', '', $state_name);
+
+    return $state_name;
 }
 
 
@@ -26,9 +61,9 @@ function city_name_shortcode($atts) {
 
 
 function state_data_shortcode($atts) {
-   // $state_name = state_name_shortcode($atts);
-    //$state_key = ucwords(str_replace('-', ' ', $state_name));
-    $state_key = 'California';
+    $state_name = state_name_shortcode($atts);
+    $state_key = ucwords(str_replace('-', ' ', $state_name));
+    
 
     $city_data = json_decode(file_get_contents(plugin_dir_path(__FILE__) . 'cities.json'), true);
 
