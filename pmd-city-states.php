@@ -12,6 +12,7 @@ add_shortcode('city_name', 'city_name_shortcode');
 add_shortcode('state_data', 'state_data_shortcode');
 add_shortcode('states_data', 'states_data_shortcode');
 add_shortcode('display_name', 'display_name_shortcode');
+add_shortcode('service_state_data', 'service_state_data_shortcode');
 
 // Rewrite rules for state and city paraemters
 function custom_rewrite_rules() {
@@ -202,6 +203,56 @@ function display_name_shortcode() {
 
     return '';
 }
+
+function service_state_data_shortcode($atts) {
+    $service_title = isset($atts['service_title']) ? sanitize_text_field($atts['service_title']) : '';
+    $service_slug = sanitize_title($service_title);
+
+    $city_data = json_decode(file_get_contents(plugin_dir_path(__FILE__) . 'cities.json'), true);
+
+    // Display a list of states in a Bootstrap table for the given service title
+    $html = '<div class="container">';
+    $html .= '<div class="table-responsive">';
+    $html .= '<h3>List of States PeterMD Offers Affordable ' . esc_html($service_title) . '</h3>';
+    $html .= '<table class="table table-striped">';
+    $html .= '<tbody>';
+
+    $column_count = 0;
+
+    foreach ($city_data as $state => $cities) {
+        // Open a new row for every 4 states
+        if ($column_count % 4 === 0) {
+            $html .= '<tr>';
+        }
+
+        $state_slug = sanitize_title($state);
+        //$url = 'https://getpetermd.com/' . esc_attr($service_slug) . '-page/' . $state_slug;
+        $url = 'https://getpetermd.com/affordable-trt-page/' . $state_slug;
+
+        // Initialize the title text for each link
+        $hyperlink_title_text = 'Click here to learn more about ' . esc_html($service_title) . ' in ' . $state . '.';
+
+        // Create a table cell with the link
+        $html .= '<td>';
+        $html .= '<p><a href="' . esc_url($url) . '" title="' . $hyperlink_title_text . '">' . esc_html($state) . '</a></p>';
+        $html .= '</td>';
+
+        // Close the row for every 4 states
+        if (($column_count + 1) % 4 === 0 || $column_count === count($city_data) - 1) {
+            $html .= '</tr>';
+        }
+
+        $column_count++;
+    }
+    $html .= '</tbody>';
+    $html .= '</table>';
+    $html .= '</div>';
+    $html .= '</div>'; // Close the container
+
+    return $html;
+}
+
+// Esage: [service_state_data service_title="Affordable TRT"]
 
 
 
