@@ -33,34 +33,14 @@ function custom_query_vars($query_vars) {
 add_filter('query_vars', 'custom_query_vars');
 
 function state_name_shortcode() {
-    // Attempt to directly access the state name from the URL
-    $state_name = isset($_GET['state']) ? sanitize_text_field($_GET['state']) : '';
-
-    // If the state name is not in the query parameter, try to get it from the URL structure
-    if (empty($state_name)) {
-        global $wp;
-        $current_url = home_url(add_query_arg(array(), $wp->request));
-        $url_parts = explode('/', $current_url);
-
-        // Get the last part of the URL (state name)
-        $state_name = end($url_parts);
-
-        // Remove any additional parameters
-        $state_name_parts = explode('?', $state_name);
-        $state_name = $state_name_parts[0];
-    }
-
-    // Remove any non-alphanumeric characters
-    $state_name = preg_replace('/[^a-zA-Z0-9]/', ' ', $state_name);
-
-    $state_upper = ucwords($state_name);
-    return $state_upper;
+    $state_name = get_query_var('state');
+    return ucwords($state_name);
 }
-
 
 function city_name_shortcode($atts) {
     // Attempt to directly access the city name from the URL
     $city_name = isset($_GET['city']) ? sanitize_text_field($_GET['city']) : '';
+    $city_name = get_query_var('city');
 
     // If the city name is not in the query parameter, try to get it from the URL structure
     if (empty($city_name)) {
@@ -81,22 +61,25 @@ function city_name_shortcode($atts) {
 
     // Remove any non-alphanumeric characters
     $city_name = preg_replace('/[^a-zA-Z0-9]/', ' ', $city_name);
+    $city_name = ucwords($city_name) . ' ' . ucwords(str_replace('-', ' ', $state));
 
     // If the city name is not empty, try to find it in the cities.json file
     if (!empty($city_name)) {
         $city_data = json_decode(file_get_contents(plugin_dir_path(__FILE__) . 'cities.json'), true);
 
         foreach ($city_data as $state => $cities) {
-            // Check if the city exists in the current state
-            if (in_array($city_name, $cities)) {
-                return ucwords($city_name) . ', ' . ucwords(str_replace('-', ' ', $state));
+            foreach ($cities as $city) {
+                $city = trim($city);
+                $city_name = trim($city_name);
+                if ($city === $city_name) {
+                    return $city;
+                }
             }
         }
     }
 
     return ''; // Return an empty string if the city is not found or not provided
 }
-
 
 
 function state_data_shortcode($atts) {
@@ -158,7 +141,7 @@ function state_data_shortcode($atts) {
 }    
 
 function empty_state_data_shortcode($atts) {
-    $state_name = '';//state_name_shortcode($atts);
+    $state_name = '';
 
     $city_data = json_decode(file_get_contents(plugin_dir_path(__FILE__) . 'cities.json'), true);
 
@@ -201,20 +184,24 @@ function empty_state_data_shortcode($atts) {
 }
 
 function display_name_shortcode() {
+    // Get the names
     $state = state_name_shortcode();
     $city = city_name_shortcode([]);
 
+    // Make sure state is present
     if (!empty($state)) {
         $display_name = $state;
 
+        // Add city if present
         if (!empty($city)) {
-            $display_name .= ', ' . $city;
+            $display_name = $city . ', ' . $state;
         }
 
-        return $display_name;
+       return $display_name;
     }
 
-    return ''; 
+    return '';
 }
+
 
 
